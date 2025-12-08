@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Movimiento extends Model
 {
-    protected $fillable = ['cliente_id', 'tipo', 'monto', 'fecha', 'descripcion'];
+    protected $fillable = ['tienda_id','cliente_id', 'tipo', 'monto', 'fecha', 'descripcion'];
 
 // Relación: un movimiento pertenece a un cliente
     public function cliente()
@@ -14,4 +14,9 @@ class Movimiento extends Model
         return $this->belongsTo(Cliente::class);
     }
 
+    // Relación: un movimiento pertenece a una tienda
+    public function tienda()
+    {
+        return $this->belongsTo(Tienda::class);
+    }
 }

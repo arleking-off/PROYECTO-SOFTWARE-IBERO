@@ -2,76 +2,74 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cliente;
 use App\Models\Movimiento;
+use App\Models\Cliente;
 use Illuminate\Http\Request;
 
 class MovimientoController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $movimientos = Movimiento::with('cliente')->latest()->get();
+        $tiendaId = session('tienda_id');
+
+        $movimientos = Movimiento::where('tienda_id', $tiendaId)
+            ->with('cliente')
+            ->orderBy('fecha', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return view('movimientos.index', compact('movimientos'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function create(Request $request)
     {
-        $clientes = Cliente::where('estado', 'activo')->get();
-        return view('movimientos.create', compact('clientes'));
+        $tiendaId = session('tienda_id');
+
+        $clientes = Cliente::where('tienda_id', $tiendaId)
+            ->where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get();
+
+        $clienteSeleccionado = $request->get('cliente');
+
+        return view('movimientos.create', compact('clientes', 'clienteSeleccionado'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
+        $tiendaId = session('tienda_id');
+
         $request->validate([
             'cliente_id' => 'required|exists:clientes,id',
             'tipo' => 'required|in:fiado,abono',
-            'monto' => 'required|numeric|min:0.01',
-            'fecha' => 'required|date'
+            'monto' => 'required|numeric|min:1',
+            'fecha' => 'required|date',
+            'descripcion' => 'nullable'
         ]);
 
-        Movimiento::create($request->all());
+        // Verificar que el cliente pertenece a la tienda actual
+        $cliente = Cliente::where('tienda_id', $tiendaId)
+            ->findOrFail($request->cliente_id);
+
+        Movimiento::create([
+            'tienda_id' => $tiendaId,
+            'cliente_id' => $request->cliente_id,
+            'tipo' => $request->tipo,
+            'monto' => $request->monto,
+            'fecha' => $request->fecha,
+            'descripcion' => $request->descripcion
+        ]);
+
         return redirect()->route('movimientos.index')
             ->with('success', 'Movimiento registrado exitosamente');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Movimiento $movimiento)
     {
-        //
-    }
+        if ($movimiento->tienda_id != session('tienda_id')) {
+            abort(403, 'No tienes permiso para ver este movimiento');
+        }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Movimiento $movimiento)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Movimiento $movimiento)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Movimiento $movimiento)
-    {
-        //
+        return view('movimientos.show', compact('movimiento'));
     }
 }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cliente extends Model
 {
-    protected $fillable = ['nombre', 'alias', 'contacto', 'estado'];
+    protected $fillable = ['tienda_id','nombre', 'alias', 'contacto', 'estado'];
     public function movimientos()
     {
         return $this->hasMany(Movimiento::class);
@@ -18,5 +18,10 @@ class Cliente extends Model
         $fiados = $this->movimientos()->where('tipo', 'fiado')->sum('monto');
         $abonos = $this->movimientos()->where('tipo', 'abono')->sum('monto');
         return $fiados - $abonos;
+    }
+    // Relación: un cliente pertenece a una tienda
+    public function tienda()
+    {
+        return $this->belongsTo(Tienda::class);
     }
 }
