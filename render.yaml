@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: libro-creditos
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: APP_NAME
+        value: Libro de Creditos
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      - key: CACHE_DRIVER
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        fromDatabase:
+          name: libro-creditos-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: libro-creditos-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: libro-creditos-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: libro-creditos-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: libro-creditos-db
+          property: password
+
+databases:
+  - name: libro-creditos-db
+    databaseName: libro_creditos
+    plan: free
