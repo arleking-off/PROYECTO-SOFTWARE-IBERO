@@ -18,7 +18,8 @@
                             <select name="cliente_id" class="form-select @error('cliente_id') is-invalid @enderror" required>
                                 <option value="">-- Seleccione un cliente --</option>
                                 @foreach($clientes as $cliente)
-                                    <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
+                                    <option value="{{ $cliente->id }}"
+                                        {{ (old('cliente_id') == $cliente->id || (isset($clienteSeleccionado) && $clienteSeleccionado == $cliente->id)) ? 'selected' : '' }}>
                                         {{ $cliente->nombre }}
                                         @if($cliente->saldo() > 0)
                                             - Debe: ${{ number_format($cliente->saldo(), 0) }}
@@ -28,6 +29,7 @@
                                     </option>
                                 @endforeach
                             </select>
+
                             @error('cliente_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

@@ -2,90 +2,112 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Cliente;
 use App\Models\Movimiento;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ReporteController extends Controller
 {
-    // Reporte de cartera general
     public function cartera()
     {
-        $clientes = Cliente::with('movimientos')->get()->map(function($cliente) {
-            return [
-                'id' => $cliente->id,
-                'nombre' => $cliente->nombre,
-                'alias' => $cliente->alias,
-                'contacto' => $cliente->contacto,
-                'saldo' => $cliente->saldo(),
-                'ultimo_movimiento' => $cliente->movimientos()->latest()->first()?->fecha
-            ];
-        })->filter(function($cliente) {
-            return $cliente['saldo'] > 0; // Solo clientes con deuda
-        })->sortByDesc('saldo');
+        $tiendaId = session('tienda_id');
 
-        return view('reportes.cartera', compact('clientes'));
+        $clientes = Cliente::where('tienda_id', $tiendaId)
+            ->where('estado', 'activo')
+            ->get()
+            ->map(function($cliente) {
+                $cliente->saldo_actual = $cliente->saldo();
+                return $cliente;
+            })
+            ->filter(function($cliente) {
+                return $cliente->saldo_actual > 0;
+            })
+            ->sortByDesc('saldo_actual');
+
+        // Calcular total sumando el atributo temporal saldo_actual
+        $totalCartera = $clientes->sum('saldo_actual');
+        $cantidadClientes = $clientes->count();
+
+        return view('reportes.cartera', compact('clientes', 'totalCartera', 'cantidadClientes'));
     }
 
-    // Reporte de morosidad (clientes con deuda > 30 días)
+
     public function morosidad()
     {
-        $fechaLimite = now()->subDays(30);
+        $tiendaId = session('tienda_id');
+        $fechaLimite = Carbon::now()->subDays(30);
 
-        $clientes = Cliente::with('movimientos')->get()->map(function($cliente) use ($fechaLimite) {
-            $ultimoMovimiento = $cliente->movimientos()->latest()->first();
-            $saldo = $cliente->saldo();
+        $clientes = Cliente::where('tienda_id', $tiendaId)
+            ->where('estado', 'activo')
+            ->get()
+            ->map(function($cliente) use ($fechaLimite) {
+                $saldo = $cliente->saldo();
 
-            if ($saldo > 0 && $ultimoMovimiento && $ultimoMovimiento->fecha < $fechaLimite) {
-                return [
-                    'id' => $cliente->id,
-                    'nombre' => $cliente->nombre,
-                    'contacto' => $cliente->contacto,
-                    'saldo' => $saldo,
-                    'dias_mora' => now()->diffInDays($ultimoMovimiento->fecha)
-                ];
-            }
-            return null;
-        })->filter()->sortByDesc('dias_mora');
+                if ($saldo > 0) {
+                    $ultimoMovimiento = $cliente->movimientos()
+                        ->orderBy('fecha', 'desc')
+                        ->first();
 
-        return view('reportes.morosidad', compact('clientes'));
+                    if ($ultimoMovimiento && $ultimoMovimiento->fecha < $fechaLimite) {
+                        $cliente->saldo_actual = $saldo;
+                        $cliente->ultimo_movimiento = $ultimoMovimiento->fecha;
+                        $cliente->dias_mora = Carbon::parse($ultimoMovimiento->fecha)
+                            ->diffInDays(Carbon::now());
+                        return $cliente;
+                    }
+                }
+
+                return null;
+            })
+            ->filter()
+            ->sortByDesc('dias_mora');
+
+        $totalMorosos = $clientes->count();
+        $totalDeudaMorosa = $clientes->sum('saldo_actual');
+
+        return view('reportes.morosidad', compact('clientes', 'totalMorosos', 'totalDeudaMorosa'));
     }
 
-    // Exportar cartera a CSV
     public function exportarCartera()
     {
-        $clientes = Cliente::with('movimientos')->get()->filter(function($cliente) {
-            return $cliente->saldo() > 0;
-        })->sortByDesc(function($cliente) {
-            return $cliente->saldo();
-        });
+        $tiendaId = session('tienda_id');
 
-        $filename = 'cartera_' . date('Y-m-d') . '.csv';
+        $clientes = Cliente::where('tienda_id', $tiendaId)
+            ->where('estado', 'activo')
+            ->get()
+            ->map(function($cliente) {
+                $cliente->saldo_actual = $cliente->saldo();
+                return $cliente;
+            })
+            ->filter(function($cliente) {
+                return $cliente->saldo_actual > 0;
+            });
+
+        $filename = 'cartera_' . tienda_actual()->nombre . '_' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
 
         $callback = function() use ($clientes) {
             $file = fopen('php://output', 'w');
 
-            // Encabezados del CSV
             fputcsv($file, ['ID', 'Nombre', 'Alias', 'Contacto', 'Saldo']);
 
-            // Datos
             foreach ($clientes as $cliente) {
                 fputcsv($file, [
                     $cliente->id,
                     $cliente->nombre,
                     $cliente->alias,
                     $cliente->contacto,
-                    number_format($cliente->saldo(), 2, '.', '')
+                    number_format($cliente->saldo_actual, 0)
                 ]);
             }
 
             fclose($file);
         };
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
 
         return response()->stream($callback, 200, $headers);
     }

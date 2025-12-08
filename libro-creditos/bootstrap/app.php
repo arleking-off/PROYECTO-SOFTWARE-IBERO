@@ -10,9 +10,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
+    ->withMiddleware(function (Middleware $middleware) {
+        // Registrar middleware personalizado para tiendas
+        $middleware->alias([
+            'tienda' => \App\Http\Middleware\TiendaMiddleware::class,
+        ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
