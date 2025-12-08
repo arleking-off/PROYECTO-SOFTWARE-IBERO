@@ -18,22 +18,20 @@ COPY . /app
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# Instalar dependencias SIN ejecutar scripts
+# Instalar dependencias
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
 # Permisos
 RUN chmod -R 775 storage bootstrap/cache
 
-# Limpiar cualquier cache previo
+# Limpiar cache
 RUN rm -rf bootstrap/cache/*.php
 
-EXPOSE 8080
+EXPOSE 10000
 
-# Ejecutar comandos al INICIO, no durante build
-CMD php artisan config:clear && \
-    php artisan cache:clear && \
+# Script de inicio
+CMD php artisan migrate --force && \
     php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache && \
-    php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=$PORT
+    php artisan serve --host=0.0.0.0 --port=10000
