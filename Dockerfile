@@ -5,6 +5,7 @@ WORKDIR /app
 # Instalar dependencias
 RUN apt-get update && apt-get install -y \
     git curl libpng-dev libonig-dev libxml2-dev zip unzip \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar extensiones PHP
@@ -27,11 +28,29 @@ RUN chmod -R 775 storage bootstrap/cache
 # Limpiar cache
 RUN rm -rf bootstrap/cache/*.php
 
-EXPOSE 10000
-
 # Script de inicio
-CMD php artisan migrate --force && \
-    php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache && \
-    php artisan serve --host=0.0.0.0 --port=10000
+COPY <<'EOF' /start.sh
+#!/bin/bash
+set -e
+
+echo "Waiting for database..."
+until php artisan migrate:status 2>/dev/null || php artisan migrate --force; do
+  echo "Database not ready, waiting 2 seconds..."
+  sleep 2
+done
+
+echo "Running migrations..."
+php artisan migrate --force
+
+echo "Caching configuration..."
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+echo "Starting server on port ${PORT}..."
+php artisan serve --host=0.0.0.0 --port=${PORT}
+EOF
+
+RUN chmod +x /start.sh
+
+CMD ["/start.sh"]
