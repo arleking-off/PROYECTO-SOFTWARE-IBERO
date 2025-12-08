@@ -1,1 +1,1 @@
-Could not open input file: artisan
+web: cd libro-creditos && php artisan serve --host=0.0.0.0 --port=$PORT
