@@ -2,14 +2,14 @@ FROM php:8.2-cli
 
 WORKDIR /app
 
-# Instalar dependencias
+# Instalar dependencias incluyendo PostgreSQL
 RUN apt-get update && apt-get install -y \
     git curl libpng-dev libonig-dev libxml2-dev zip unzip \
-    default-mysql-client \
+    libpq-dev postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensiones PHP
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+# Instalar extensiones PHP (pgsql en lugar de mysql)
+RUN docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
