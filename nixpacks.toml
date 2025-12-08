@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["php82", "php82Packages.composer"]
+
+[phases.install]
+cmds = ["cd libro-creditos && composer install --no-dev --optimize-autoloader"]
+
+[phases.build]
+cmds = [
+    "cd libro-creditos && php artisan config:cache",
+    "cd libro-creditos && php artisan route:cache",
+    "cd libro-creditos && php artisan view:cache",
+    "cd libro-creditos && php artisan migrate --force"
+]
+
+[start]
+cmd = "cd libro-creditos && php artisan serve --host=0.0.0.0 --port=$PORT"
