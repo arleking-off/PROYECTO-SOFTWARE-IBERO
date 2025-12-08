@@ -22,9 +22,6 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 # Instalar dependencias
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
-# Cargar helpers
-RUN composer dump-autoload
-
 # Permisos
 RUN chmod -R 775 storage bootstrap/cache
 
