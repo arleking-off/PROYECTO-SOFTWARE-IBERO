@@ -2,10 +2,7 @@
 nixPkgs = ["php82", "php82Packages.composer"]
 
 [phases.install]
-cmds = [
-    "cd libro-creditos",
-    "COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-scripts"
-]
+cmds = ["COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-scripts"]
 
 [start]
-cmd = "cd libro-creditos && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
